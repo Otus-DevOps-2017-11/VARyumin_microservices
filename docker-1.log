@@ -1,0 +1,4 @@
+REPOSITORY                                                       TAG                 IMAGE ID            CREATED             SIZE
+varyumin/ubuntu-tmp-file                                         latest              01a7f1473dab        7 seconds ago       112MB
+
+container от image отличается тем что в container есть описание сети, диска, используемый драйвер диска, лимита ЦПУ, лимит памями. 
