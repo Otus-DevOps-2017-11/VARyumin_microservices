@@ -225,12 +225,9 @@ varyumin/ui        1.0                 93c6eb4456a2        45 minutes ago      7
 #### 7. Задание со звездочкой. Образ на основе Alpine Linux
 Собран образ на базе Apline Linix - версия 3. Так же применены все рекомендации linter. Образ на основе Ubuntu переименрован в Dockerfile_ubuntu.
 Результат:
-```bush
-REPOSITORY                  TAG                 IMAGE ID            CREATED              SIZE
-varyumin/ui        3.0                 7b1aa2e62c77        About a minute ago   207MB
-varyumin/ui        2.0                 6e4896f7e84d        2 hours ago          394MB
-varyumin/ui        1.0                 93c6eb4456a2        2 hours ago          768MB
-```
+docker_images_size
+![Images Size](.pic/docker_images_size)
+
 Применение рекомендация linter ведет к снижению замнаиемого образа, так как чистится кеш.
 
 Рекомендации от linter позволяют сделать вывод, что удаление временных файлов, кешей и другого мусора так же позволяют уменьшить образ.
