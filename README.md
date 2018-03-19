@@ -226,7 +226,7 @@ varyumin/ui        1.0                 93c6eb4456a2        45 minutes ago      7
 Собран образ на базе Apline Linix - версия 3. Так же применены все рекомендации linter. Образ на основе Ubuntu переименрован в Dockerfile_ubuntu.
 Результат:
 docker_images_size
-![Images Size](.pic/docker_images_size)
+![Images Size](.pic/docker_images_size.jpg)
 
 Применение рекомендация linter ведет к снижению замнаиемого образа, так как чистится кеш.
 
