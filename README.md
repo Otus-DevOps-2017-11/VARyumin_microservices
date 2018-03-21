@@ -246,3 +246,220 @@ docker run -d --network=reddit --network-alias=comment varyumin/comment:1.0
 docker run -d --network=reddit -p 9292:9292 varyumin/ui:2.0
 ```
 Запуск контейнеров с volume позволило удалять и запускать контейнер без потери данных в базе данных.
+
+
+
+## Homework 17
+
+### Подключаемся к ранее созданному docker host’у
+
+> docker-machine ls
+
+```markdown
+NAME          ACTIVE   DRIVER   STATE     URL                        SWARM   DOCKER        ERRORS
+docker-host   *        google   Running   tcp://35.205.246.70:2376           v18.02.0-ce  
+```
+
+> eval $(docker-machine env docker-host)
+
+## Работа с сетью в Docker
+
+### None network driver
+
+1. Запустим контейнер с использованием none-драйвера, с временем жизни 100 секунд, по истечении автоматически удаляется. В качестве образа используем joffotron/docker-net-tools, в него входят утилиты bind-tools, net-tools и curl.
+
+```bash
+docker run --network none --rm -d --name net_test joffotron/docker-net-tools -c "sleep 100"
+docker exec -ti net_test ifconfig
+```
+
+```markdown
+В результате, видим:
+• что внутри контейнера из сетевых интерфейсов существует только loopback.
+• сетевой стек самого контейнера работает (ping localhost), но без возможности контактировать с внешним миром.
+• Значит, можно даже запускать сетевые сервисы внутри такого контейнера, но лишь для локальных экспериментов
+```
+
+
+2. Запустили контейнер в сетевом пространстве docker-хоста
+
+```bash
+docker run --network host --rm -d --name net_test joffotron/docker-net-tools -c "sleep 100"
+```
+
+3. Вывод команды docker exec -ti net_test ifconfig
+
+Вывод команды docker exec -ti net_test ifconfig
+
+Видим, что значения совпадают.
+
+4. Запустили docker run --network host -d nginx несколько раз, а контейнер всё равно один запущен.
+
+5. На docker-host машине выполнили команду:
+
+```bash
+> sudo ln -s /var/run/docker/netns /var/run/netns
+
+```
+Теперь можно просматривать существующие неймспейсы с помощью
+
+```bash
+> sudo ip netns
+```
+
+#### Примечание: ip netns exec <namespace> <command> - позволит выполнять команды в выбранном namespace
+
+## Bridge network driver
+
+##### 6. Создаём brige сеть в  docker
+
+```bash
+docker network create reddit --driver bridge
+```
+##### 7. Запускаем наш проект reddit с использованием brige-сети:
+
+```bash
+> docker run -d --network=reddit mongo:latest
+> docker run -d --network=reddit  varyumin/post:1.0
+> docker run -d --network=reddit  varyumin/comment:1.0
+> docker run -d --network=reddit -p 9292:9292  varyumin/ui:1.0
+```
+
+Наши сервисы ищут друг друга по ДНС именам.
+
+##### 8. Присваиваем контейнерам имена или алиасы:
+
+```bash
+> docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db mongo:latest
+> docker run -d --network=reddit --network-alias=post  varyumin/post:1.0
+> docker run -d --network=reddit --network-alias=comment  varyumin/comment:1.0
+> docker run -d --network=reddit -p 9292:9292  varyumin/ui:1.0
+```
+
+##### 9. Убиваем все докер контейнеры
+
+> docker kill $(docker ps -q)
+
+##### 10. Создаём докер сети для фронтэндв и бекэнда:
+
+> docker network create back_net —subnet=10.0.2.0/24
+> docker network create front_net --subnet=10.0.1.0/24
+
+##### 11. Запускаем сети в соответсвующих сетях
+
+> docker run -d --network=front_net -p 9292:9292 --name ui  varyumin/ui:1.0
+> docker run -d --network=back_net --name comment  varyumin/comment:1.0
+> docker run -d --network=back_net --name post  varyumin/post:1.0
+> docker run -d --network=back_net --name mongo_db --network-alias=post_db --network-alias=comment_db mongo:latest
+
+#### Info brige, iptables, docker-proxy
+![Images Size](.pic/docker_brige1.jpg)
+
+![Images Size](.pic/docker_brige2.jpg)
+
+![Images Size](.pic/iptables.jpg)
+
+![Images Size](.pic/docker-proxy.jpg)
+
+## Docker-compose
+
+##### 12. Ставим Docker Compose
+
+> pip install docker-compose
+
+##### 13. Создаём файл docker-compose.yml в папке reddit-microservices с конфигурацией 4 наших контейнеров
+
+```docker
+version: '3.3'
+services:
+  post_db:
+    image: mongo:3.2
+    volumes:
+      - post_db:/data/db
+    networks:
+      - reddit
+  ui:
+    build: ./ui
+    image: ${USERNAME}/ui:1.0
+    ports:
+      - 9292:9292/tcp
+    networks:
+      - reddit
+  post:
+    build: ./post-py
+    image: ${USERNAME}/post:1.0
+    networks:
+      - reddit
+  comment:
+    build: ./comment
+    image: ${USERNAME}/comment:1.0
+    networks:
+      - reddit
+
+volumes:
+  post_db:
+
+networks:
+  reddit:
+```
+##### 14. Перед запуском необходимо экспортировать значения данных переменных окружения. В нашем случае это имя пользователя
+
+> export USERNAME= varyumin
+
+Поднимаем наши сервисы
+> docker-compose up -d
+> docker-compose ps
+
+Наблюдаем такую картину
+
+```markdown
+            Name                          Command             State           Ports         
+--------------------------------------------------------------------------------------------
+redditmicroservices_comment_1   puma                          Up                            
+redditmicroservices_post_1      python3 post_app.py           Up                            
+redditmicroservices_post_db_1   docker-entrypoint.sh mongod   Up      27017/tcp             
+redditmicroservices_ui_1        puma                          Up      0.0.0.0:9292->9292/tcp
+
+```
+
+## Самостоятельное задание
+
+```docker
+version: '3.3'
+services:
+  post_db:
+    image: mongo:${VERSION_MONGO}
+    volumes:
+      - post_db:/data/db
+    networks:
+      back_net:
+        aliases:
+          - post_db
+          - comment_db
+  ui:
+    build: ./ui
+    image: ${USERNAME}/ui:${APP_VERSION_UI}
+    ports:
+      - ${APP_PORT}:9292/tcp
+    networks:
+      - front_net
+  post:
+    build: ./post-py
+    image: ${USERNAME}/post:${APP_VERSION_PTSO}
+    networks:
+      - front_net
+      - back_net
+  comment:
+    build: ./comment
+    image: ${USERNAME}/comment:${APP_VERSION_COMMENT}
+    networks:
+      - back_net
+      - front_net
+
+volumes:
+  post_db:
+
+networks:
+  front_net:
+  back_net:
+```
