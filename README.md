@@ -509,3 +509,5 @@ git commit -m “Add reddit app”
 git push gitlab docker-6
 ```
 Настраиваем пайплайн для тестирования, вносим изменения в .gitlab-ci.yml
+
+![Images Size](.pic/pipeline.jpg)
