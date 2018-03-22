@@ -463,3 +463,49 @@ networks:
   front_net:
   back_net:
 ```
+
+## Homework 19
+Разворачиваем инстанс
+```
+docker-machine create --driver google    --google-project docker-198106 \
+  --google-zone europe-west1-b  --google-disk-size 100  --google-machine-type n1-standard-1 \
+  --google-machine-image $(gcloud compute images list --filter ubuntu-1604-lts --uri)    gitlab-ci
+```
+Создаем docker-compose.yml
+
+Настройки в web интерфейсе (группа, проект)
+
+Создаем структуру каталогов на инстансе
+mkdir -p /srv/gitlab/config /srv/gitlab/data /srv/gitlab/logs
+
+Добавляем наш проект на инстанс gitlab
+```
+git checkout -b docker-6
+git remote add gitlab http://35.205.139.135/homework/example.git
+git push gitlab docker-6
+```
+Добавляем пайплайн, коммитим и отправляем на инстанс
+```
+git add .gitlab-ci.yml
+git commit -m 'add pipeline definition'
+git push gitlab docker-6
+```
+Запускаем runner на инстансе
+```
+docker run -d --name gitlab-runner --restart always \
+-v /srv/gitlab-runner/config:/etc/gitlab-runner \
+-v /var/run/docker.sock:/var/run/docker.sock \
+gitlab/gitlab-runner:latest
+```
+Регистрируем runner
+```
+docker exec -it gitlab-runner gitlab-runner register
+```
+Скачиваем и добавляем reddit на сервер
+```
+git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+git add reddit/
+git commit -m “Add reddit app”
+git push gitlab docker-6
+```
+Настраиваем пайплайн для тестирования, вносим изменения в .gitlab-ci.yml
