@@ -511,3 +511,36 @@ git push gitlab docker-6
 Настраиваем пайплайн для тестирования, вносим изменения в .gitlab-ci.yml
 
 ![Images Size](.pic/pipeline.jpg)
+
+## Homework 20
+1. Добавлено в pipeline новый этапы Review Staging Production Environment
+2. Реализованно динамическое создание  Environment
+3. Выполнено одно задание со звездочкой
+```
+...
+branch review:
+  stage: review
+  script: echo "Deploy to $CI_ENVIRONMENT_SLUG"
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    url: http://$CI_ENVIRONMENT_SLUG.example.com
+    on_stop: Stop review
+  only:
+  - branches
+  except:
+  - master
+
+Stop review:
+  stage: review
+  script: echo "Stop review to $CI_ENVIRONMENT_SLUG"
+  when: manual
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    action: stop
+  only:
+  - branches
+  except:
+  - master
+...
+```
+![Images Size](.pic/pipeline20.jpg)
