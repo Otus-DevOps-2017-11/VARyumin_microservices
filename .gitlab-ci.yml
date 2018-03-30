@@ -45,6 +45,19 @@ branch review:
   environment:
     name: branch/$CI_COMMIT_REF_NAME
     url: http://$CI_ENVIRONMENT_SLUG.example.com
+    on_stop: Stop review
+  only:
+  - branches
+  except:
+  - master
+
+Stop review:
+  stage: review
+  script: echo "Stop review to $CI_ENVIRONMENT_SLUG"
+  when: manual
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    action: stop
   only:
   - branches
   except:
