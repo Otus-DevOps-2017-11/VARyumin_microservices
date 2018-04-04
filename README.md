@@ -634,7 +634,7 @@ scrape_configs: # Эндпойнты - группы метрик, собираю
 ##### 8. В директории prometheus собираем Docker образ:
 
 ```bash
-$ export USER_NAME=asomir
+$ export USER_NAME=varyumin
 $ docker build -t $USER_NAME/prometheus .
 ```
 
