@@ -1,8 +1,6 @@
 version: '3.3'
 services:
   post_db:
-    env_file:
-      - reddit.env
     image: mongo:${VERSION_MONGO}
     volumes:
       - post_db:/data/db
@@ -12,30 +10,22 @@ services:
           - post_db
           - comment_db
   ui:
-    env_file:
-      - reddit.env
     image: ${USERNAME}/ui:latest
     ports:
       - 9292:9292/tcp
     networks:
       - front_net
   post:
-    env_file:
-      - reddit.env
     image: ${USERNAME}/post:latest
     networks:
       - front_net
       - back_net
   comment:
-    env_file:
-      - reddit.env
     image: ${USERNAME}/comment:latest
     networks:
       - back_net
       - front_net
   prometheus:
-    env_file:
-      - reddit.env
     image: ${USERNAME}/prometheus
     networks:
       - front_net
@@ -56,6 +46,9 @@ services:
     - /proc:/host/proc:ro
     - /sys:/host/sys:ro
     - /:/rootfs:ro
+    networks:
+      - front_net
+      - back_net
     command:
     - '--path.procfs=/host/proc'
     - '--path.sysfs=/host/sys'
