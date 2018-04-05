@@ -1,5 +1,6 @@
 version: '3.3'
 services:
+
   post_db:
     image: mongo:${VERSION_MONGO}
     volumes:
@@ -11,49 +12,46 @@ services:
           - comment_db
   ui:
     image: ${USERNAME}/ui:latest
+    environment:
+     - POST_SERVICE_HOST=post
+     - POST_SERVICE_PORT=5000
+     - COMMENT_SERVICE_HOST=comment
+     - COMMENT_SERVICE_PORT=9292
     ports:
       - 9292:9292/tcp
+    depends_on:
+      - post
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.ui
     networks:
       - front_net
+
   post:
     image: ${USERNAME}/post:latest
+    environment:
+      - POST_DATABASE_HOST=post_db
+      - POST_DATABASE=posts
+    depends_on:
+      - post_db
+    ports:
+      - "5000:5000"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.post
     networks:
       - front_net
       - back_net
+
   comment:
     image: ${USERNAME}/comment:latest
     networks:
       - back_net
       - front_net
-  prometheus:
-    image: ${USERNAME}/prometheus
-    networks:
-      - front_net
-      - back_net
-    ports:
-      - '9090:9090'
-    volumes:
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention=1d'
-
-  node-exporter:
-    image: prom/node-exporter:v0.15.2
-    user: root
-    volumes:
-    - /proc:/host/proc:ro
-    - /sys:/host/sys:ro
-    - /:/rootfs:ro
-    networks:
-      - front_net
-      - back_net
-    command:
-    - '--path.procfs=/host/proc'
-    - '--path.sysfs=/host/sys'
-    - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
-
 volumes:
   prometheus_data:
   post_db:
