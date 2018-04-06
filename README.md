@@ -544,3 +544,236 @@ Stop review:
 ...
 ```
 ![Images Size](.pic/pipeline20.jpg)
+
+# Homework 21
+
+### Подготовка окружения
+
+##### 1. Создадим правило для файерволла Prometheus и Puma:
+
+
+```bash
+$ gcloud compute firewall-rules create prometheus-default --allow tcp:9090
+
+$ gcloud compute firewall-rules create puma-default --allow tcp:9292
+
+```
+
+##### 2. Создадим Docker хост в GCE и настроим локальное окружение на работу с ним
+
+> export GOOGLE_PROJECT=docker-198106
+
+##### 3. Создаём docker хост, с которым мы и будем работать
+
+```bash
+# create docker host
+docker-machine create --driver google \
+    --google-machine-image https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/family/ubuntu-1604-lts \
+    --google-machine-type n1-standard-1 \
+    vm1
+```
+##### 4. Подключаемся к docker-machine
+```bash
+# configure local env
+eval $(docker-machine env vm1)
+
+```
+
+### Запуск Prometheus
+
+##### 5. Запускаем Prometheus внутри docker контейнера.:
+
+```bash
+$ docker run --rm -p 9090:9090 -d --name prometheus prom/prometheus:v2.1.0
+```
+
+```bash
+docker-machine ip vm1
+```
+
+##### Остановим Prometheus
+
+```bash
+docker stop prometheus
+```
+
+### Создание Docker образа
+
+##### 6. Создаём docker файл monitoring/prometheus/Dockerfile, который копирует файл конфигурации с нашей машины внутрь контейнера:
+
+```docker
+FROM prom/prometheus:v2.1.0
+ADD prometheus.yml /etc/prometheus/
+```
+
+##### 7. В директории monitoring/prometheus создали файл prometheus.yml
+
+```yamlex
+global:
+  scrape_interval: '5s' # частота сбора метрик
+
+scrape_configs: # Эндпойнты - группы метрик, собирающих одинаковые данные
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+        - 'localhost:9090' # адрес, откуда чо собираем
+
+  - job_name: 'ui'
+    static_configs:
+      - targets:
+        - 'ui:9292'
+
+  - job_name: 'comment'
+    static_configs:
+      - targets:
+        - 'comment:9292'
+```
+
+##### 8. В директории prometheus собираем Docker образ:
+
+```bash
+$ export USER_NAME=asomir
+$ docker build -t $USER_NAME/prometheus .
+```
+
+### Образы микросервисов
+
+##### 9. Сборку образов производим при помощи скриптов docker_build.sh, которые есть в директории каждого сервиса. С его помощью мы добавим информацию из Git в наш healthcheck.
+
+Запустиим сразу все из корня репы и пойдём пить кофе
+
+```bash
+for i in ui post-py comment; do cd src/$i; bash
+docker_build.sh; cd -; done
+```
+
+##### 10. Определиv в вашем docker/docker-compose.yml файле новый сервис.
+
+```yamlex
+version: '3.3'
+services:
+  post_db:
+    image: mongo:${VERSION_MONGO}
+    volumes:
+      - post_db:/data/db
+    networks:
+      back_net:
+        aliases:
+          - post_db
+          - comment_db
+  ui:
+    container_name: ui
+    image: ${USERNAME}/ui:latest
+    ports:
+      - ${APP_PORT}:9292/tcp
+    networks:
+      - front_net
+  post:
+    container_name: post-py
+    image: ${USERNAME}/post:latest
+    networks:
+      - front_net
+      - back_net
+  comment:
+    container_name: comment
+    image: ${USERNAME}/comment:latest
+    networks:
+      - back_net
+      - front_net
+
+  prometheus:
+    image: ${USER_NAME}/prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention=1d'
+    networks:
+      - back_net
+      - front_net
+
+
+
+volumes:
+  post_db:
+  prometheus_data:
+
+networks:
+  front_net:
+  back_net:
+```
+Запускаем docker-compose up -d и проверяем работоспособность
+
+## Exporters
+
+##### Определим еще один сервис в docker/docker-compose.yml файле.
+
+```yamlex
+services:
+
+  node-exporter:
+    image: prom/node-exporter:v0.15.2
+    user: root
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+```
+
+##### Добавим слежение за новым сервисом в Prometheus
+
+```yamlex
+  - job_name: 'node'
+    static_configs:
+      - targets:
+        - 'node-exporter:9100'
+```
+##### Пересоздадим  для Prometheus
+
+monitoring/prometheus
+
+```bash
+$ docker build -t $USER_NAME/prometheus .
+```
+
+##### Перезапустим наши сервисы
+
+```bash
+$ docker-compose down
+$ docker-compose up -d
+```
+В списке эндпойнтов появился ещё один сервис node
+
+##### Получим информацию об использовании CPU
+
+Зайдем на хост:
+
+> docker-machine ssh vm1
+
+Добавим нагрузки:
+
+yes > /dev/null
+
+
+##### Запушили собранные образы на DockerHub:
+$ docker login
+Login Succeeded
+
+docker push $USER_NAME/ui
+docker push $USER_NAME/comment
+docker push $USER_NAME/post
+docker push $USER_NAME/prometheus
+
+Удалили виртуалку:
+$ docker-machine rm vm1
+
+## Ссылка на мой репозиторий:
+
+https://hub.docker.com/u/varyumin/
