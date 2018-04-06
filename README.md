@@ -823,5 +823,3 @@ https://hub.docker.com/u/varyumin/
 ## Ссылка на мой репозиторий:
 
 https://hub.docker.com/u/varyumin/
-=======
->>>>>>> master
