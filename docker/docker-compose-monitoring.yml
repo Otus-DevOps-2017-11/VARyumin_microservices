@@ -2,8 +2,6 @@ version: '3.3'
 services:
 
   prometheus:
-    env_file:
-      - reddit.env
     image: ${USERNAME}/prometheus
     networks:
       - front_net
@@ -69,7 +67,7 @@ services:
     networks:
     - front_net
     - back_net
-    
+
 volumes:
   grafana_data:
   prometheus_data:
