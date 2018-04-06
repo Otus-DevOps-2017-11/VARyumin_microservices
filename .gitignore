@@ -1,3 +1,4 @@
 build_info.txt
-Gemfile.lock
-.env
+
+## python specific
+*.pyc

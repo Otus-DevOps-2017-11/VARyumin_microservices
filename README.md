@@ -547,8 +547,11 @@ Stop review:
 
 # Homework 21
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> master
 ### Подготовка окружения
 
 ##### 1. Создадим правило для файерволла Prometheus и Puma:
@@ -634,7 +637,11 @@ scrape_configs: # Эндпойнты - группы метрик, собираю
 ##### 8. В директории prometheus собираем Docker образ:
 
 ```bash
+<<<<<<< HEAD
 $ export USER_NAME=varyumin
+=======
+$ export USER_NAME=asomir
+>>>>>>> master
 $ docker build -t $USER_NAME/prometheus .
 ```
 
@@ -779,6 +786,7 @@ $ docker-machine rm vm1
 ## Ссылка на мой репозиторий:
 
 https://hub.docker.com/u/varyumin/
+<<<<<<< HEAD
 
 # Homework 23
 
@@ -815,3 +823,5 @@ https://hub.docker.com/u/varyumin/
 ## Ссылка на мой репозиторий:
 
 https://hub.docker.com/u/varyumin/
+=======
+>>>>>>> master
